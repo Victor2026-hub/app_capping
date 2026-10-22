@@ -1,0 +1,23 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Flask / SQLite
+instance/
+*.db
+
+# Pytest
+.pytest_cache/
+
+# Claude Code (local settings)
+.claude/settings.local.json
+
+# Datos del caso (no se publican; colocarlos a mano en Insumos/)
+Insumos/
