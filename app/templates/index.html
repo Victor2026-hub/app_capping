@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+
+{% block head %}
+<style>
+  .tarjetas { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin: 1.5rem 0 2rem; }
+  .tarjeta { background: #fff; border: 1px solid #E2E8F0; border-top: 4px solid var(--dorado); border-radius: 6px; padding: 1.25rem; }
+  .tarjeta .valor { font-size: 2.2rem; font-weight: 700; color: var(--azul); line-height: 1.1; }
+  .tarjeta .etiqueta { color: var(--gris); font-size: .9rem; margin-top: .25rem; }
+  h2 { color: var(--azul); font-size: 1.15rem; }
+  form.filtros { display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end; background: #fff; border: 1px solid #E2E8F0; border-radius: 6px; padding: 1rem 1.25rem; margin-top: 1.5rem; }
+  form.filtros label { display: flex; flex-direction: column; font-size: .85rem; color: var(--gris); gap: .25rem; }
+  form.filtros select { padding: .4rem .5rem; border: 1px solid #CBD5E0; border-radius: 4px; font-size: .95rem; }
+  form.filtros button { background: var(--azul); color: #fff; border: 0; border-bottom: 3px solid var(--dorado); border-radius: 4px; padding: .5rem 1.25rem; font-size: .95rem; cursor: pointer; }
+  table.datos { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #E2E8F0; }
+  table.datos th { background: var(--azul); color: #fff; text-align: left; padding: .6rem .75rem; font-weight: 600; font-size: .9rem; }
+  table.datos td { padding: .55rem .75rem; border-top: 1px solid #E2E8F0; font-size: .92rem; }
+  table.datos tr:nth-child(even) td { background: #F9FAFB; }
+  table.datos .num { text-align: right; }
+  .acciones { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; margin: 1rem 0; }
+  .acciones form { margin: 0; }
+  .btn { display: inline-block; background: var(--azul); color: #fff; border: 0; border-bottom: 3px solid var(--dorado); border-radius: 4px; padding: .5rem 1.25rem; font-size: .95rem; cursor: pointer; text-decoration: none; font-family: inherit; }
+  .grafico { background: #fff; border: 1px solid #E2E8F0; border-radius: 6px; padding: .75rem; margin-top: 1.5rem; }
+  .vacio { color: var(--gris); text-align: center; }
+</style>
+{% endblock %}
+
+{% block content %}
+  <h1>Capping de leyes · Proyecto Aurora</h1>
+
+  <section class="tarjetas">
+    <div class="tarjeta">
+      <div class="valor">{{ contadores.sondajes }}</div>
+      <div class="etiqueta">Sondajes</div>
+    </div>
+    <div class="tarjeta">
+      <div class="valor">{{ contadores.muestras }}</div>
+      <div class="etiqueta">Muestras válidas</div>
+    </div>
+    <div class="tarjeta">
+      <div class="valor">{{ contadores.inconsistencias }}</div>
+      <div class="etiqueta">Inconsistencias</div>
+    </div>
+  </section>
+
+  <form class="filtros" method="get" action="{{ url_for('main.index') }}">
+    <label>Zona
+      <select name="zona">
+        {% for z in zonas %}<option value="{{ z }}" {{ 'selected' if z == filtros.zona }}>{{ z }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>Método
+      <select name="metodo" id="metodo">
+        {% for clave, nombre in metodos.items() %}<option value="{{ clave }}" {{ 'selected' if clave == filtros.metodo }}>{{ nombre }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>Parámetro
+      <select name="parametro" id="parametro">
+        {% for v in parametros[filtros.metodo] %}<option value="{{ v }}" {{ 'selected' if v == filtros.parametro }}>{{ v }}</option>{% endfor %}
+      </select>
+    </label>
+    <button type="submit">Aplicar</button>
+  </form>
+  <script>
+    (function () {
+      var opciones = {{ parametros | tojson }};
+      var etiqueta = {percentil: "P = ", media_k_sigma: "k = "};
+      var metodo = document.getElementById("metodo");
+      var parametro = document.getElementById("parametro");
+      function llenar(seleccionado) {
+        parametro.innerHTML = "";
+        opciones[metodo.value].forEach(function (v) {
+          var o = document.createElement("option");
+          o.value = v;
+          o.textContent = etiqueta[metodo.value] + v;
+          if (String(v) === String(seleccionado)) o.selected = true;
+          parametro.appendChild(o);
+        });
+      }
+      metodo.addEventListener("change", function () { llenar(null); });
+      llenar({{ filtros.parametro | tojson }});
+    })();
+  </script>
+
+  <section class="tarjetas">
+    <div class="tarjeta">
+      <div class="valor">{{ resumen.n }}</div>
+      <div class="etiqueta">Muestras en el análisis ({{ filtros.zona }})</div>
+    </div>
+    <div class="tarjeta">
+      <div class="valor">{{ "%.2f"|format(resumen.media) }}</div>
+      <div class="etiqueta">Media (g/t Au)</div>
+    </div>
+    <div class="tarjeta">
+      <div class="valor">{{ "%.3f"|format(resumen.mediana) }}</div>
+      <div class="etiqueta">Mediana (g/t Au)</div>
+    </div>
+    <div class="tarjeta">
+      <div class="valor">{{ "%.2f"|format(resumen.maximo) }}</div>
+      <div class="etiqueta">Máximo · {{ resumen.maximo_muestra_id }} · {{ resumen.maximo_sondaje_id }}</div>
+    </div>
+    <div class="tarjeta">
+      <div class="valor">{{ "%.2f"|format(resumen.umbral) }}</div>
+      <div class="etiqueta">Umbral · {{ metodos[resumen.metodo] }},
+        {{ ("P = " if resumen.metodo == "percentil" else "k = ") ~ resumen.parametro }}</div>
+    </div>
+    <div class="tarjeta">
+      <div class="valor">{{ resumen.outliers }}</div>
+      <div class="etiqueta">Outliers (ley &gt; umbral)</div>
+    </div>
+    <div class="tarjeta">
+      <div class="valor">{{ "%.2f"|format(resumen.media_capeada) }}</div>
+      <div class="etiqueta">Media capeada (g/t Au)</div>
+    </div>
+    <div class="tarjeta">
+      <div class="valor">{{ "%.1f"|format(resumen.variacion_pct) }} %</div>
+      <div class="etiqueta">Variación de la media</div>
+    </div>
+  </section>
+
+  <div class="acciones">
+    <a class="btn" href="{{ url_for('main.exportar_excel', zona=filtros.zona, metodo=filtros.metodo, parametro=filtros.parametro) }}">Exportar Excel</a>
+    <form method="post" action="{{ url_for('main.recargar') }}">
+      <input type="hidden" name="zona" value="{{ filtros.zona }}">
+      <input type="hidden" name="metodo" value="{{ filtros.metodo }}">
+      <input type="hidden" name="parametro" value="{{ filtros.parametro }}">
+      <button class="btn" type="submit">Recargar datos</button>
+    </form>
+  </div>
+
+  <h2>Outliers</h2>
+  <table class="datos">
+    <thead>
+      <tr><th>Muestra_ID</th><th>Sondaje_ID</th><th>Zona</th><th class="num">Desde_m</th><th class="num">Hasta_m</th><th class="num">Au original</th><th class="num">Au_capped</th></tr>
+    </thead>
+    <tbody>
+      {% for o in outliers %}
+      <tr>
+        <td>{{ o.muestra_id }}</td>
+        <td>{{ o.sondaje_id }}</td>
+        <td>{{ o.zona }}</td>
+        <td class="num">{{ "%.2f"|format(o.desde_m) }}</td>
+        <td class="num">{{ "%.2f"|format(o.hasta_m) }}</td>
+        <td class="num">{{ "%.2f"|format(o.au_gpt) }}</td>
+        <td class="num">{{ "%.2f"|format(o.au_capped) }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7" class="vacio">No hay outliers con este umbral.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2 style="margin-top:2rem">Histograma antes y después del capping</h2>
+  <div class="grafico">{{ histograma_svg|safe }}</div>
+
+  <h2 style="margin-top:2rem">Inconsistencias detectadas</h2>
+  <table class="datos">
+    <thead>
+      <tr><th>Tipo</th><th>Muestra</th><th>Sondaje</th><th>Descripción</th></tr>
+    </thead>
+    <tbody>
+      {% for i in inconsistencias %}
+      <tr>
+        <td>{{ i.tipo }}</td>
+        <td>{{ i.muestra_id or "—" }}</td>
+        <td>{{ i.sondaje_id }}</td>
+        <td>{{ i.descripcion }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4" class="vacio">Sin inconsistencias.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

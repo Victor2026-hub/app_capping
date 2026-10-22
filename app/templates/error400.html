@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block title %}Solicitud no válida · Proyecto Aurora{% endblock %}
+{% block content %}
+  <h1>Solicitud no válida</h1>
+  <p>{{ mensaje }}</p>
+  <p><a href="{{ url_for('main.index') }}" style="color: var(--azul);">Volver al inicio</a></p>
+{% endblock %}
